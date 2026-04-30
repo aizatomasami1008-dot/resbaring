@@ -58,6 +58,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .timer-val.warn { color: #e67e22 !important; }
 .timer-val.danger { color: #e74c3c !important; animation: tblink 0.5s infinite; }
 @keyframes tblink { 0%,100%{opacity:1}50%{opacity:0.3} }
+.obj-counter { font-size: 10px; color: #aaa; margin-top: 2px; }
 .turn-bar { padding: 6px 1.5rem; background: white; border-bottom: 1px solid #eee; font-size: 12px; color: #888; display: flex; align-items: center; gap: 8px; }
 .tdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .tdot.a { background: #378ADD; }
@@ -67,16 +68,16 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .msg { max-width: 82%; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.6; }
 .msg.a { align-self: flex-start; background: #e8f0fb; border: 1px solid #b5d4f4; color: #0C447C; }
 .msg.b { align-self: flex-end; background: #fdf0ea; border: 1px solid #f5c4b3; color: #712B13; }
-.msg.judge { align-self: center; max-width: 92%; background: #f5f5f0; border: 1px solid #e0e0d8; color: #666; font-size: 12px; }
+.msg.judge { align-self: center; max-width: 92%; background: #f5f5f0; border: 1px solid #e0e0d8; color: #666; font-size: 12px; cursor: pointer; }
 .msg.penalty { align-self: center; max-width: 92%; background: #fff0f0; border: 1px solid #ffd0d0; color: #c00; font-size: 12px; text-align: center; }
 .msg.objection { align-self: center; max-width: 92%; background: #fffbea; border: 1px solid #f5d76e; color: #7d6608; font-size: 12px; }
 .msg.bonus { align-self: center; max-width: 92%; background: #e8f5e9; border: 1px solid #c8e6c9; color: #2e7d32; font-size: 12px; text-align: center; }
+.msg.concede { align-self: center; max-width: 92%; background: #f3f0ff; border: 1px solid #d4c8f5; color: #5b4d8a; font-size: 12px; text-align: center; }
 .mmeta { font-size: 11px; margin-bottom: 4px; font-weight: 600; opacity: 0.6; }
-.judge-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; gap: 8px; }
-.judge-summary { font-size: 12px; color: #888; font-style: italic; flex: 1; }
-.judge-toggle { font-size: 10px; color: #bbb; white-space: nowrap; flex-shrink: 0; }
-.judge-detail { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0d8; font-size: 12px; color: #555; line-height: 1.7; display: none; }
+.judge-closed { font-size: 12px; color: #aaa; font-style: italic; text-align: center; padding: 2px 0; }
+.judge-detail { font-size: 12px; color: #555; line-height: 1.7; display: none; }
 .judge-detail.open { display: block; }
+.judge-hint { font-size: 10px; color: #ccc; text-align: right; margin-top: 4px; }
 .input-area { border-top: 1px solid #eee; padding: 1rem 1.5rem; background: white; }
 .input-row { display: flex; gap: 8px; align-items: flex-end; }
 .arginput { flex: 1; padding: 10px 14px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; resize: none; min-height: 42px; max-height: 120px; line-height: 1.5; }
@@ -86,9 +87,13 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .sendbtn.b { background: #D85A30; color: white; }
 .sendbtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .climit { font-size: 11px; color: #bbb; margin-top: 4px; text-align: right; }
-.obj-btn { width: 100%; margin-top: 8px; padding: 8px; font-size: 12px; background: white; border: 1px solid #f5d76e; border-radius: 8px; color: #7d6608; cursor: pointer; }
+.action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.obj-btn { padding: 8px; font-size: 12px; background: white; border: 1px solid #f5d76e; border-radius: 8px; color: #7d6608; cursor: pointer; }
 .obj-btn:hover { background: #fffbea; }
 .obj-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.concede-btn { padding: 8px; font-size: 12px; background: white; border: 1px solid #d4c8f5; border-radius: 8px; color: #5b4d8a; cursor: pointer; }
+.concede-btn:hover { background: #f3f0ff; }
+.concede-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .verdict { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
 .vcard { background: #fafafa; border: 1px solid #eee; border-radius: 12px; padding: 1.5rem; text-align: center; }
 .vwinner { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
@@ -106,6 +111,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .vbadge.time { background: #fdf0ea; color: #993C1D; }
 .vbadge.score { background: #fff0f0; color: #c00; }
 .vbadge.points { background: #e8f5e9; color: #2e7d32; }
+.vbadge.concede { background: #f3f0ff; color: #5b4d8a; }
 .restart-btn { padding: 12px; font-size: 14px; background: white; border: 1px solid #ddd; border-radius: 12px; cursor: pointer; }
 .restart-btn:hover { background: #f5f5f0; }
 </style>
@@ -173,6 +179,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
         <div>
           <div class="timer-label" id="tlabel-a">選手A</div>
           <div class="timer-val a" id="tval-a">3:00</div>
+          <div class="obj-counter" id="obj-count-a">異議 3回</div>
         </div>
       </div>
       <div class="timer-box b">
@@ -180,6 +187,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
         <div>
           <div class="timer-label" id="tlabel-b">選手B</div>
           <div class="timer-val b" id="tval-b">3:00</div>
+          <div class="obj-counter" id="obj-count-b">異議 3回</div>
         </div>
       </div>
     </div>
@@ -191,7 +199,10 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
         <button class="sendbtn a" id="sendbtn">送信</button>
       </div>
       <div class="climit" id="climit">0 / 500字</div>
-      <button class="obj-btn" id="obj-btn" disabled>⚖ 直前の判定に異議を申し立てる</button>
+      <div class="action-row">
+        <button class="obj-btn" id="obj-btn" disabled>⚖ 判定に異議（残3回）</button>
+        <button class="concede-btn" id="concede-btn" disabled>🤝 相手の主張を認める</button>
+      </div>
     </div>
   </div>
 
@@ -201,22 +212,23 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 <script>
 const FALLACIES=[
   {name:'人身攻撃',desc:'相手の人格・属性を攻撃している',penalty:15},
-  {name:'藁人形論法',desc:'相手の主張を歪めて攻撃している',penalty:12},
-  {name:'論点すり替え',desc:'無関係な話題に誘導している',penalty:10},
-  {name:'循環論法',desc:'結論を前提に使っている',penalty:8},
-  {name:'スリッパリースロープ',desc:'根拠なく飛躍した連鎖を主張',penalty:8},
-  {name:'早まった一般化',desc:'少数例から過度に一般化',penalty:7},
-  {name:'権威への訴え',desc:'根拠なく権威で正当化',penalty:6},
-  {name:'衆人への訴え',desc:'多数意見を論拠にしている',penalty:6},
-  {name:'感情的訴えすぎ',desc:'感情的煽動で論理の代わりにしている',penalty:6},
-  {name:'偽の因果',desc:'相関を因果と混同',penalty:8},
-  {name:'二項対立の誤り',desc:'複数の選択肢を二択に矮小化',penalty:7},
-  {name:'相手意見の無視',desc:'相手の論点に全く応答していない',penalty:10},
-  {name:'論理破綻',desc:'前提と結論が繋がっていない・自己矛盾',penalty:12},
   {name:'事実歪曲',desc:'統計・事実を意図的に誤用・改ざん',penalty:15},
-  {name:'モラル等価の誤り',desc:'軽微な行為と重大な問題を同列視',penalty:6},
-  {name:'サンクコスト誤謬',desc:'過去のコストを理由に論を展開',penalty:5},
+  {name:'藁人形論法',desc:'相手の主張を歪めて攻撃している',penalty:10},
+  {name:'論理破綻',desc:'前提と結論が繋がっていない・自己矛盾',penalty:10},
+  {name:'相手意見の無視',desc:'相手の論点に全く応答していない',penalty:10},
+  {name:'論点すり替え',desc:'無関係な話題に誘導している',penalty:5},
+  {name:'循環論法',desc:'結論を前提に使っている',penalty:5},
+  {name:'偽の因果',desc:'相関を因果と混同',penalty:5},
+  {name:'スリッパリースロープ',desc:'根拠なく飛躍した連鎖を主張',penalty:5},
+  {name:'早まった一般化',desc:'少数例から過度に一般化',penalty:3},
+  {name:'権威への訴え',desc:'根拠なく権威で正当化',penalty:3},
+  {name:'衆人への訴え',desc:'多数意見を論拠にしている',penalty:3},
+  {name:'感情的訴えすぎ',desc:'感情的煽動で論理の代わりにしている',penalty:3},
+  {name:'二項対立の誤り',desc:'複数の選択肢を二択に矮小化',penalty:3},
+  {name:'モラル等価の誤り',desc:'軽微な行為と重大な問題を同列視',penalty:3},
+  {name:'サンクコスト誤謬',desc:'過去のコストを理由に論を展開',penalty:3},
 ];
+const PEN_CAP=20;
 
 let S={
   topic:'',na:'',nb:'',
@@ -226,7 +238,9 @@ let S={
   timeA:180,timeB:180,
   initTimeA:180,initTimeB:180,
   timerInterval:null,
-  lastJudgeResult:null,canObject:false,
+  lastJudgeResult:null,lastJudgeSide:null,
+  canObject:false,
+  objA:3,objB:3,
   wcTime:true,wcScore:true,wcRounds:true,
 };
 
@@ -249,7 +263,7 @@ $('start-btn').addEventListener('click',()=>{
   $('badge').textContent='討論中';
   $('gna').textContent=S.na;$('gnb').textContent=S.nb;
   $('tlabel-a').textContent=S.na;$('tlabel-b').textContent=S.nb;
-  updateGauge();updateTurn();updateTimerDisplay();
+  updateGauge();updateTurn();updateTimerDisplay();updateObjCount();
   addMsg('judge',null,`テーマ：「${S.topic}」　討論開始。${S.na}から先攻。`);
   startTimer();
 });
@@ -277,11 +291,15 @@ function fmt(s){
 function updateTimerDisplay(){
   $('tval-a').textContent=fmt(S.timeA);
   $('tval-b').textContent=fmt(S.timeB);
-  const ea=$('tval-a'),eb=$('tval-b');
-  ea.className='timer-val a'+(S.timeA<=30?' danger':S.timeA<=60?' warn':'');
-  eb.className='timer-val b'+(S.timeB<=30?' danger':S.timeB<=60?' warn':'');
+  $('tval-a').className='timer-val a'+(S.timeA<=30?' danger':S.timeA<=60?' warn':'');
+  $('tval-b').className='timer-val b'+(S.timeB<=30?' danger':S.timeB<=60?' warn':'');
   $('tdot-a').className='timer-dot'+(S.turn==='a'&&!S.busy&&!S.ended?' on':'');
   $('tdot-b').className='timer-dot'+(S.turn==='b'&&!S.busy&&!S.ended?' on':'');
+}
+
+function updateObjCount(){
+  $('obj-count-a').textContent=`異議 ${S.objA}回`;
+  $('obj-count-b').textContent=`異議 ${S.objB}回`;
 }
 
 function updateGauge(){
@@ -292,20 +310,25 @@ function updateGauge(){
   $('gsc').textContent=`${S.sa} – ${S.sb}`;
 }
 
-function updateTurn(judging=false){
+function updateTurn(judging=false,objTurn=false){
   const dot=$('tdot');
   if(judging){
     dot.className='tdot judging';
-    $('ttext').textContent='審判が採点中…';
+    $('ttext').textContent=objTurn?'異議を審査中…':'審判が採点中…';
     $('sendbtn').disabled=true;
     $('obj-btn').disabled=true;
+    $('concede-btn').disabled=true;
     return;
   }
   dot.className='tdot '+S.turn;
   $('ttext').textContent=(S.turn==='a'?S.na:S.nb)+'のターン';
   $('sendbtn').className='sendbtn '+S.turn;
   $('sendbtn').disabled=false;
-  $('obj-btn').disabled=!S.canObject;
+  const objSide=S.turn==='a'?'b':'a';
+  const objLeft=objSide==='a'?S.objA:S.objB;
+  $('obj-btn').disabled=!S.canObject||objLeft<=0;
+  $('obj-btn').textContent=`⚖ 判定に異議（残${objLeft}回）`;
+  $('concede-btn').disabled=false;
 }
 
 function addMsg(side,name,text){
@@ -317,16 +340,16 @@ function addMsg(side,name,text){
   area.appendChild(d);area.scrollTop=area.scrollHeight;
 }
 
-function addJudgeMsg(summary,detail){
+function addJudgeMsg(detail){
   const area=$('msgs');
   const d=document.createElement('div');
   d.className='msg judge';
-  d.innerHTML=`<div class="judge-header"><span class="judge-summary">${summary}</span><span class="judge-toggle">▼ 詳細</span></div><div class="judge-detail">${detail}</div>`;
-  d.querySelector('.judge-header').addEventListener('click',()=>{
+  d.innerHTML=`<div class="judge-closed">審判の採点（タップで表示）</div><div class="judge-detail">${detail}</div><div class="judge-hint">タップで開閉</div>`;
+  d.addEventListener('click',()=>{
     const det=d.querySelector('.judge-detail');
-    const tog=d.querySelector('.judge-toggle');
+    const cl=d.querySelector('.judge-closed');
     det.classList.toggle('open');
-    tog.textContent=det.classList.contains('open')?'▲ 閉じる':'▼ 詳細';
+    cl.textContent=det.classList.contains('open')?'審判の採点（タップで閉じる）':'審判の採点（タップで表示）';
   });
   area.appendChild(d);area.scrollTop=area.scrollHeight;
 }
@@ -347,10 +370,10 @@ $('sendbtn').addEventListener('click',async()=>{
 
   try{
     const result=await callJudge(text,side);
-    S.lastJudgeResult=result;
+    S.lastJudgeResult=result;S.lastJudgeSide=side;
     let penTotal=0;
     if(result.fallacies&&result.fallacies.length>0){
-      penTotal=result.fallacies.reduce((s,f)=>s+(f.penalty||8),0);
+      penTotal=Math.min(result.fallacies.reduce((s,f)=>s+(f.penalty||3),0),PEN_CAP);
       const names=result.fallacies.map(f=>f.name).join('、');
       addMsg('penalty',null,`⚠ 反則：${names}（-${penTotal}点）`);
       if(side==='a') S.sa=Math.max(0,S.sa-penTotal);
@@ -368,8 +391,7 @@ $('sendbtn').addEventListener('click',async()=>{
       addMsg('bonus',null,'+20秒ボーナス');
     }
     updateGauge();updateTimerDisplay();
-    const summary=result.summary||(sc>0?`+${sc}点`:penTotal>0?`反則-${penTotal}点`:'採点完了');
-    addJudgeMsg(summary,result.comment||'');
+    addJudgeMsg(result.comment||'採点完了');
     S.canObject=true;
     S.turn=side==='a'?'b':'a';
     if(S.wcScore&&(S.sa<=0||S.sb<=0)){endDebate('score',S.sa<=0?'b':'a');return;}
@@ -385,26 +407,49 @@ $('sendbtn').addEventListener('click',async()=>{
 
 $('obj-btn').addEventListener('click',async()=>{
   if(!S.canObject||S.busy||!S.lastJudgeResult) return;
-  S.canObject=false;S.busy=true;
-  $('obj-btn').disabled=true;
-  updateTurn(true);
-  $('ttext').textContent='異議を審査中…';
+  const objSide=S.turn==='a'?'b':'a';
+  const objLeft=objSide==='a'?S.objA:S.objB;
+  if(objLeft<=0) return;
+  S.busy=true;
+  updateTurn(true,true);
+
   try{
     const lastMsg=S.msgs[S.msgs.length-1];
-    const objSide=lastMsg.side==='a'?'b':'a';
     const objName=objSide==='a'?S.na:S.nb;
-    const res=await callObjReview(lastMsg,S.lastJudgeResult,objSide,objName);
+    const res=await callObjReview(lastMsg,S.lastJudgeResult,objName);
     const d=document.createElement('div');
     d.className='msg objection';
     d.innerHTML=`<div class="mmeta">⚖ ${objName}の異議</div><div>${res.verdict}</div>`;
     $('msgs').appendChild(d);$('msgs').scrollTop=$('msgs').scrollHeight;
-    if(res.sustained&&res.scoreAdjust>0){
-      if(lastMsg.side==='a'){S.sa=Math.max(0,S.sa+res.scoreAdjust);}
-      else{S.sb=Math.max(0,S.sb+res.scoreAdjust);}
-      updateGauge();
+
+    if(res.sustained){
+      // 認容：消費しない
+      if(res.scoreAdjust>0){
+        if(S.lastJudgeSide==='a'){S.sa=Math.max(0,S.sa+res.scoreAdjust);}
+        else{S.sb=Math.max(0,S.sb+res.scoreAdjust);}
+        updateGauge();
+      }
+      addMsg('bonus',null,'異議認容：判定を修正しました');
+    } else {
+      // 棄却：消費
+      if(objSide==='a') S.objA=Math.max(0,S.objA-1);
+      else S.objB=Math.max(0,S.objB-1);
+      updateObjCount();
     }
-  }catch(e){addMsg('judge',null,'異議審査エラー。');}
-  S.busy=false;updateTurn();
+    S.canObject=false;
+  }catch(e){
+    addMsg('judge',null,'異議審査エラー。');
+  }
+  S.busy=false;
+  updateTurn();
+});
+
+$('concede-btn').addEventListener('click',()=>{
+  if(S.busy||S.ended) return;
+  const side=S.turn,name=side==='a'?S.na:S.nb;
+  const winner=side==='a'?'b':'a';
+  addMsg('concede',null,`${name}が相手の主張を認めました`);
+  setTimeout(()=>endDebate('concede',winner),800);
 });
 
 async function callJudge(text,side){
@@ -422,16 +467,20 @@ async function callJudge(text,side){
 - 通常の断言・強調・比喩は反則ではない
 - 認定する場合は発言中の具体的文言を根拠として示す
 
-【反則リスト】
-${FALLACIES.map(f=>`- ${f.name}（ペナルティ${f.penalty}）：${f.desc}`).join('\n')}
+【反則リストとペナルティ】
+重罪（-15）：人身攻撃、事実歪曲
+中罪（-10）：藁人形論法、論理破綻、相手意見の無視
+軽罪（-5）：論点すり替え、循環論法、偽の因果、スリッパリースロープ
+注意（-3）：早まった一般化、権威への訴え、衆人への訴え、感情的訴えすぎ、二項対立の誤り、モラル等価の誤り、サンクコスト誤謬
+※1発言のペナルティ合計は最大20点
 
 【加点基準（scoreChange）】
-優秀な論証（論理的・証拠あり・反論的確）：10〜20点
-普通の論証：3〜9点
+優秀（論理的・証拠あり・反論的確）：10〜20点
+普通：3〜9点
 弱い・曖昧：0〜2点
 
-【出力形式】
-{"fallacies":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"scoreChange":整数,"comment":"総評2文","summary":"一行要約"}`,
+出力形式（JSONのみ）：
+{"fallacies":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"scoreChange":整数,"comment":"審判の総評（2〜3文）"}`,
       messages:[{role:'user',content:`テーマ：${S.topic}\nスコア：${S.na} ${S.sa}点 / ${S.nb} ${S.sb}点\n直近：\n${hist}\n今回（${name}）："${text}"`}]
     })
   });
@@ -440,13 +489,13 @@ ${FALLACIES.map(f=>`- ${f.name}（ペナルティ${f.penalty}）：${f.desc}`).j
   return JSON.parse(raw.replace(/```json|```/g,'').trim());
 }
 
-async function callObjReview(lastMsg,lastResult,objSide,objName){
+async function callObjReview(lastMsg,lastResult,objName){
   const res=await fetch('/api/judge',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      system:'あなたはディベート上訴審判です。異議申し立てを審査しJSONのみで返答。マークダウン不要。\n出力形式：{"sustained":true/false,"verdict":"2文の審査結論","scoreAdjust":認容時の補正点数（0〜10）}',
-      messages:[{role:'user',content:`テーマ：${S.topic}\n発言（${lastMsg.name}）："${lastMsg.text}"\n判定：${JSON.stringify(lastResult)}\n${objName}が異議申し立て。判定は正当でしたか？`}]
+      system:'あなたはディベート上訴審判です。異議申し立てを審査しJSONのみで返答。マークダウン不要。\n出力形式：{"sustained":true/false,"verdict":"2文の審査結論","scoreAdjust":認容時の補正点数（0〜10、棄却時は0）}',
+      messages:[{role:'user',content:`テーマ：${S.topic}\n発言（${lastMsg.name}）："${lastMsg.text}"\n元の判定：${JSON.stringify(lastResult)}\n${objName}が異議申し立て。判定は正当でしたか？証拠が不十分なら認容してください。`}]
     })
   });
   const data=await res.json();
@@ -463,14 +512,17 @@ async function endDebate(reason,winner){
   $('s-verdict').style.flexDirection='column';
   $('badge').textContent='終了';
   $('s-verdict').innerHTML='<div style="padding:2rem;text-align:center;color:#888;font-size:13px">最終判定を生成中…</div>';
-  const badgeClass=reason==='time'?'time':reason==='score'?'score':'points';
-  const badgeText=reason==='time'?'持ち時間切れ':reason==='score'?'点数ゼロ':'判定';
+  const badgeMap={time:['持ち時間切れ','time'],score:['点数ゼロ','score'],points:['判定','points'],concede:['主張認定','concede']};
+  const [badgeText,badgeClass]=badgeMap[reason]||['終了','points'];
   try{
     let wname,wcolor,reasonText;
     if(winner){
       wname=winner==='a'?S.na:S.nb;
       wcolor=winner==='a'?'#185FA5':'#993C1D';
-      reasonText=reason==='time'?`${winner==='a'?S.nb:S.na}の持ち時間がゼロになりました。`:reason==='score'?`${winner==='a'?S.nb:S.na}の点数がゼロになりました。`:'';
+      if(reason==='time') reasonText=`${winner==='a'?S.nb:S.na}の持ち時間がゼロになりました。`;
+      else if(reason==='score') reasonText=`${winner==='a'?S.nb:S.na}の点数がゼロになりました。`;
+      else if(reason==='concede') reasonText=`${winner==='a'?S.nb:S.na}が相手の主張を認めました。`;
+      else reasonText='';
     } else {
       const hist=S.msgs.map(m=>`[${m.name}]: ${m.text}`).join('\n');
       const res=await fetch('/api/judge',{
@@ -501,7 +553,7 @@ async function endDebate(reason,winner){
       </div>
       <button class="restart-btn" id="rbtn">もう一度</button>`;
     $('rbtn').addEventListener('click',()=>{
-      S={topic:'',na:'',nb:'',sa:50,sb:50,turn:'a',msgs:[],round:0,max:6,busy:false,ended:false,timeA:180,timeB:180,initTimeA:180,initTimeB:180,timerInterval:null,lastJudgeResult:null,canObject:false,wcTime:true,wcScore:true,wcRounds:true};
+      S={topic:'',na:'',nb:'',sa:50,sb:50,turn:'a',msgs:[],round:0,max:6,busy:false,ended:false,timeA:180,timeB:180,initTimeA:180,initTimeB:180,timerInterval:null,lastJudgeResult:null,lastJudgeSide:null,canObject:false,objA:3,objB:3,wcTime:true,wcScore:true,wcRounds:true};
       $('s-verdict').style.display='none';
       $('s-setup').style.display='flex';
       $('s-setup').style.flexDirection='column';
