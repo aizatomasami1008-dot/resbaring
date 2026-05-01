@@ -1043,11 +1043,8 @@ function applyRoundResults(results){
   // 反則ペナルティをEコインに追加反映
   const allFallaciesA=[...results[0].fallaciesA||[],...results[1].fallaciesA||[],...results[2].fallaciesA||[],...results[3].fallaciesA||[]];
   const allFallaciesB=[...results[0].fallaciesB||[],...results[1].fallaciesB||[],...results[2].fallaciesB||[],...results[3].fallaciesB||[]];
-  const penA=allFallaciesA.reduce((s,f)=>s+(f.penalty||0),0);
-  const penB=allFallaciesB.reduce((s,f)=>s+(f.penalty||0),0);
-  console.log('Penalties A:', penA, allFallaciesA.map(f=>f.name));
-  console.log('Penalties B:', penB, allFallaciesB.map(f=>f.name));
-  console.log('Before ecoin:', S.ecoinA, S.ecoinB, 'diff:', Math.round((results[0].scoreA+results[1].scoreA+results[2].scoreA+results[3].scoreA-results[0].scoreB-results[1].scoreB-results[2].scoreB-results[3].scoreB)/8));
+  const penA=allFallaciesA.reduce((s,f)=>s+Math.abs(f.penalty||0),0);
+  const penB=allFallaciesB.reduce((s,f)=>s+Math.abs(f.penalty||0),0);
   S.ecoinA=Math.max(0,S.ecoinA-Math.min(penA,20));
   S.ecoinB=Math.max(0,S.ecoinB-Math.min(penB,20));
 
@@ -1133,7 +1130,6 @@ async function callObjReview(lastMsg,lastResult,objName){
 // ==================== CONCEDE ====================
 $('concede-btn').addEventListener('click',()=>{
   if(S.busy||S.ended||S.finalObjPhase) return;
-  console.log('CONCEDE pressed! side:', S.turn, 'busy:', S.busy);
   const side=S.turn,name=side==='a'?S.na:S.nb;
   const winner=side==='a'?'b':'a';
   // 合理+20、論理+10ボーナスを付与してから終了
