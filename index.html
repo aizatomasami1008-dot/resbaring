@@ -1036,7 +1036,7 @@ function applyRoundResults(results){
   const roundTotalA=logic.scoreA+evidence.scoreA+persuasion.scoreA+rational.scoreA;
   const roundTotalB=logic.scoreB+evidence.scoreB+persuasion.scoreB+rational.scoreB;
   // 差分のみEコインに反映（勝った分だけ加点・負けた分だけ減点）
-  const roundDiff=Math.round((roundTotalA-roundTotalB)/8);
+  const roundDiff=Math.round((roundTotalA-roundTotalB)/2);
   S.ecoinA=Math.max(0,Math.round(S.ecoinA+roundDiff));
   S.ecoinB=Math.max(0,Math.round(S.ecoinB-roundDiff));
 
