@@ -541,8 +541,8 @@ function renderStack(id, amount, side, animate){
   for(let i=0;i<coins;i++){
     const coin=document.createElement('div');
     // i=0が一番下（最大幅）、i=coins-1が一番上（最小幅）
-    const ratio=coins>1?(coins-1-i)/(coins-1):0;
-    const w=Math.round(minW+(maxW-minW)*(1-ratio));
+    const ratio=coins>1?i/(coins-1):0;
+    const w=Math.round(maxW-(maxW-minW)*ratio);
     coin.className=`coin ${side}`;
     coin.style.width=w+'px';
     if(animate){coin.style.opacity='0';setTimeout(()=>{coin.style.opacity='1';},i*30);}
@@ -855,35 +855,35 @@ async function callJudge(system, buffer){
 
 const DEFAULT_RESULT={scoreA:100,scoreB:100,fallaciesA:[],fallaciesB:[],comment:'採点不可'};
 
-async function callPairJudges(system1, system2, label1, label2, buffer){
+async function callPairJudges(key1, key2, sys1, sys2, buffer){
   const hist=buffer.map(m=>`[${m.name}（${m.side==='a'?'青':'赤'}）]: ${m.text}`).join('\n');
-  const system=`あなたは2人の審判です。以下の2つの役割でそれぞれ独立して採点し、JSONのみで返答してください。マークダウン不要。
+  const system=`あなたは2役の審判AIです。JSONのみで返答。マークダウン不要。
 
-【${label1}審判】
-${system1}
+=== ${key1}審判の役割 ===
+${sys1}
 
-【${label2}審判】
-${system2}
+=== ${key2}審判の役割 ===
+${sys2}
 
-出力形式（JSONのみ）：
-{"${label1}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"総評2文"},"${label2}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"総評2文"}}`;
+出力形式（JSONのみ、キーは必ず英字）：
+{"${key1}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},"${key2}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"}}`;
   const res=await fetch('/api/judge',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       system,
-      messages:[{role:'user',content:`テーマ：${S.topic}\n現在Eコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}\n\n【今回の6発言】\n${hist}`}]
+      messages:[{role:'user',content:`テーマ：${S.topic}\nEコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}\n\n【6発言】\n${hist}`}]
     })
   });
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
   const parsed=safeParseJSON(raw);
-  return [parsed[label1]||{...DEFAULT_RESULT},parsed[label2]||{...DEFAULT_RESULT}];
+  return [parsed[key1]||{...DEFAULT_RESULT}, parsed[key2]||{...DEFAULT_RESULT}];
 }
 
 async function callAllJudges(buffer){
-  const [logic,evidence]=await callPairJudges(LOGIC_SYSTEM,EVIDENCE_SYSTEM,'論理','証拠',buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
-  const [persuasion,rational]=await callPairJudges(PERSUASION_SYSTEM,RATIONAL_SYSTEM,'説得','合理',buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
+  const [logic,evidence]=await callPairJudges('logic','evidence',LOGIC_SYSTEM,EVIDENCE_SYSTEM,buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
+  const [persuasion,rational]=await callPairJudges('persuasion','rational',PERSUASION_SYSTEM,RATIONAL_SYSTEM,buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
   return [logic,evidence,persuasion,rational];
 }
 
