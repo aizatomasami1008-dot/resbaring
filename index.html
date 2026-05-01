@@ -693,6 +693,16 @@ $('sendbtn').addEventListener('click',async()=>{
 });
 
 // ==================== JUDGE CALLS ====================
+function safeParseJSON(raw){
+  // 1. コードブロック除去
+  let s=raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  // 2. 先頭の{から最後の}までを抽出
+  const start=s.indexOf('{');
+  const end=s.lastIndexOf('}');
+  if(start!==-1&&end!==-1&&end>start) s=s.slice(start,end+1);
+  return JSON.parse(s);
+}
+
 async function callJudge(system, buffer){
   const hist=buffer.map(m=>`[${m.name}（${m.side==='a'?'青':'赤'}）]: ${m.text}`).join('\n');
   const res=await fetch('/api/judge',{
@@ -705,16 +715,16 @@ async function callJudge(system, buffer){
   });
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
-  return JSON.parse(raw.replace(/```json|```/g,'').trim());
+  return safeParseJSON(raw);
 }
 
+const DEFAULT_RESULT={scoreA:100,scoreB:100,fallaciesA:[],fallaciesB:[],comment:'採点不可'};
+
 async function callAllJudges(buffer){
-  const [logic,evidence,persuasion,rational]=await Promise.all([
-    callJudge(LOGIC_SYSTEM,buffer),
-    callJudge(EVIDENCE_SYSTEM,buffer),
-    callJudge(PERSUASION_SYSTEM,buffer),
-    callJudge(RATIONAL_SYSTEM,buffer),
-  ]);
+  const logic=await callJudge(LOGIC_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
+  const evidence=await callJudge(EVIDENCE_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
+  const persuasion=await callJudge(PERSUASION_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
+  const rational=await callJudge(RATIONAL_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
   return [logic,evidence,persuasion,rational];
 }
 
@@ -814,7 +824,7 @@ async function callObjReview(lastMsg,lastResult,objName){
   });
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
-  return JSON.parse(raw.replace(/```json|```/g,'').trim());
+  return safeParseJSON(raw);
 }
 
 // ==================== CONCEDE ====================
@@ -934,7 +944,7 @@ async function endDebate(reason,winner){
         });
         const data=await res.json();
         const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
-        const r=JSON.parse(raw.replace(/```json|```/g,'').trim());
+        const r=safeParseJSON(raw);
         reasonText=r.reason;
       }
     } else {
