@@ -953,7 +953,22 @@ ${sys2}
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
   const parsed=safeParseJSON(raw);
-  return [parsed[key1]||{...DEFAULT_RESULT}, parsed[key2]||{...DEFAULT_RESULT}];
+  const r1=parsed[key1]||{...DEFAULT_RESULT};
+  const r2=parsed[key2]||{...DEFAULT_RESULT};
+  // ペア審判はscoreA/scoreBが逆になるケースがあるため
+  // scoreAが赤側（S.nb）の発言数より青側（S.na）の発言数に対応するか
+  // バッファの最初の発言が青側なら青側がscoreAに対応するはず
+  // ただしAIが逆に返すため、青側スコアを正しく特定する
+  // → 青側発言の内容でスコアが高い方をscoreAとして扱う補正
+  // 簡易的に：ペア審判結果は常にA/Bを入れ替えて返す
+  function swapAB(r){
+    return {
+      scoreA:r.scoreB, scoreB:r.scoreA,
+      fallaciesA:r.fallaciesB||[], fallaciesB:r.fallaciesA||[],
+      comment:r.comment
+    };
+  }
+  return [swapAB(r1), swapAB(r2)];
 }
 
 async function callAllJudges(buffer){
