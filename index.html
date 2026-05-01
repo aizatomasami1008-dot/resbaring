@@ -953,28 +953,68 @@ ${sys2}
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
   const parsed=safeParseJSON(raw);
-  const r1=parsed[key1]||{...DEFAULT_RESULT};
-  const r2=parsed[key2]||{...DEFAULT_RESULT};
-  // ペア審判はscoreA/scoreBが逆になるケースがあるため
-  // scoreAが赤側（S.nb）の発言数より青側（S.na）の発言数に対応するか
-  // バッファの最初の発言が青側なら青側がscoreAに対応するはず
-  // ただしAIが逆に返すため、青側スコアを正しく特定する
-  // → 青側発言の内容でスコアが高い方をscoreAとして扱う補正
-  // 簡易的に：ペア審判結果は常にA/Bを入れ替えて返す
-  function swapAB(r){
-    return {
-      scoreA:r.scoreB, scoreB:r.scoreA,
-      fallaciesA:r.fallaciesB||[], fallaciesB:r.fallaciesA||[],
-      comment:r.comment
-    };
-  }
-  return [swapAB(r1), swapAB(r2)];
+  return [parsed[key1]||{...DEFAULT_RESULT}, parsed[key2]||{...DEFAULT_RESULT}];
 }
 
 async function callAllJudges(buffer){
-  const logic=await callJudge(LOGIC_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
-  const evidence=await callJudge(EVIDENCE_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
-  const [persuasion,rational]=await callPairJudges('persuasion','rational',PERSUASION_SYSTEM,RATIONAL_SYSTEM,buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
+  const hist=buffer.map(m=>`[${m.name}（${m.side==='a'?'青':'赤'}）]: ${m.text}`).join('\n');
+  const na=S.na, nb=S.nb;
+
+  const system=`あなたは4人の審判AIです。以下の6発言を4つの視点でそれぞれ独立して評価し、JSONのみで返答してください。マークダウン不要。
+
+【重要】スコアのキーには必ず参加者の名前を使用してください。
+青側参加者名：${na}
+赤側参加者名：${nb}
+
+=== LOGOS審判（論理構造のみ評価）===
+${LOGIC_SYSTEM}
+
+=== ETHOS審判（証拠・根拠の質のみ評価）===
+${EVIDENCE_SYSTEM}
+
+=== PATHOS審判（誠実な応答・説得力のみ評価）===
+${PERSUASION_SYSTEM}
+
+=== PHROM審判（議論を深める態度のみ評価）===
+${RATIONAL_SYSTEM}
+
+出力形式（JSONのみ、名前キーを使用）：
+{
+  "logos":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
+  "ethos":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
+  "pathos":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
+  "phrom":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"}
+}`;
+
+  const res=await fetch('/api/judge',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      system,
+      messages:[{role:'user',content:`テーマ：${S.topic}\nEコイン：${na} ${Math.round(S.ecoinA)} / ${nb} ${Math.round(S.ecoinB)}\n\n【6発言】\n${hist}`}]
+    })
+  });
+  const data=await res.json();
+  const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
+  const parsed=safeParseJSON(raw);
+
+  // 名前キーからscoreA/scoreB形式に変換
+  function toResult(obj, key){
+    if(!obj||!obj[key]) return {...DEFAULT_RESULT};
+    return {
+      scoreA: obj[key][na]||100,
+      scoreB: obj[key][nb]||100,
+      fallaciesA: obj[key][`fallacies_${na}`]||[],
+      fallaciesB: obj[key][`fallacies_${nb}`]||[],
+      comment: obj[key].comment||''
+    };
+  }
+
+  const logic=toResult(parsed,'logos');
+  const evidence=toResult(parsed,'ethos');
+  const persuasion=toResult(parsed,'pathos');
+  const rational=toResult(parsed,'phrom');
+  console.log('AllJudges:', logic.scoreA, logic.scoreB, '|', evidence.scoreA, evidence.scoreB, '|', persuasion.scoreA, persuasion.scoreB, '|', rational.scoreA, rational.scoreB);
   return [logic,evidence,persuasion,rational];
 }
 
