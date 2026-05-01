@@ -1133,6 +1133,7 @@ async function callObjReview(lastMsg,lastResult,objName){
 // ==================== CONCEDE ====================
 $('concede-btn').addEventListener('click',()=>{
   if(S.busy||S.ended||S.finalObjPhase) return;
+  console.log('CONCEDE pressed! side:', S.turn, 'busy:', S.busy);
   const side=S.turn,name=side==='a'?S.na:S.nb;
   const winner=side==='a'?'b':'a';
   // 合理+20、論理+10ボーナスを付与してから終了
