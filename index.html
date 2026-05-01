@@ -42,6 +42,8 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .round-custom label { font-size: 13px; color: #666; }
 .start-btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 600; background: #222; color: white; border: none; border-radius: 12px; cursor: pointer; }
 .start-btn:hover { background: #444; }
+.test-btn { width: 100%; padding: 10px; font-size: 13px; background: transparent; border: 1px solid #ddd; border-radius: 12px; cursor: pointer; color: #888; margin-top: -8px; }
+.test-btn:hover { background: #f5f5f0; }
 
 /* ECOIN VISUAL */
 .ecoin-sec { padding: 1rem 1.5rem 0.5rem; background: #1a1a2e; border-bottom: 1px solid #333; position: relative; overflow: hidden; }
@@ -239,6 +241,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
       </div>
     </div>
     <button class="start-btn" id="start-btn">討論開始</button>
+    <button class="test-btn" id="test-btn">🧪 テストモードで開始（死刑制度）</button>
   </div>
 
   <div id="s-debate" class="debate" style="display:none">
@@ -646,6 +649,44 @@ function addJudgePanel(results){
 
 $('arginput').addEventListener('input',()=>{
   $('climit').textContent=$('arginput').value.length+' / 500字';
+});
+
+// ==================== TEST MODE ====================
+const TEST_LINES=[
+  {side:'a',text:'死刑制度は廃止すべきです。理由は三つあります。第一に、冤罪による執行は取り返しがつかない。第二に、死刑が犯罪抑止力になるという統計的根拠は存在しない。第三に、国家が人の命を奪う権限を持つべきではないという倫理的立場です。'},
+  {side:'b',text:'死刑制度は維持すべきです。まず被害者遺族の感情的回復という観点から、極刑が持つ意味は無視できません。また終身刑では脱走・獄中犯罪のリスクが残ります。さらに日本の世論調査では死刑支持が一貫して80%を超えており、民主主義的な観点からも廃止は難しい。'},
+  {side:'a',text:'抑止力については反論します。法務省の調査でも、死刑存置国と廃止国の殺人発生率に有意差はありません。感情的な納得感と、実際の犯罪抑止は別物です。また「被害者感情」は重要ですが、それは刑事司法の目的である再発防止・社会復帰と別に議論すべきです。'},
+  {side:'b',text:'統計の解釈には慎重であるべきです。廃止国と存置国を単純比較するのは、文化・経済・治安状況が異なる国を並べることであり、適切な比較ではありません。日本国内においては、極刑の存在が一定の抑止的文脈を形成していると考えるのが自然です。'},
+  {side:'a',text:'冤罪リスクは理論ではなく現実です。日本でも免田事件・財田川事件など、死刑確定後に無罪となった事例が複数あります。完璧な司法制度は存在しない以上、取り返しのつかない刑罰を維持することは制度設計として合理的ではありません。'},
+  {side:'b',text:'冤罪問題は重大ですが、それは死刑の問題ではなく捜査・裁判制度の問題です。制度を改善すべきであり、廃止の理由にはなりません。また裁判員制度の導入により複数の目で判断する仕組みが整いつつあります。死刑の廃止ではなく、適用の厳格化で対応すべきです。'},
+];
+
+$('test-btn').addEventListener('click',async()=>{
+  // 設定を自動入力
+  $('topic').value='死刑制度は廃止すべきか';
+  $('na').value='廃止';
+  $('nb').value='残置';
+  // ラウンド1に設定
+  document.querySelectorAll('.round-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.round-btn[data-val="1"]').classList.add('active');
+  selectedRounds=1;
+  // 討論開始
+  $('start-btn').click();
+  // 少し待ってから順番に自動送信
+  await new Promise(r=>setTimeout(r,500));
+  for(const line of TEST_LINES){
+    // ターンが合うまで待つ
+    await new Promise(r=>{
+      const check=()=>{
+        if(S.turn===line.side&&!S.busy) r();
+        else setTimeout(check,200);
+      };
+      check();
+    });
+    $('arginput').value=line.text;
+    $('sendbtn').click();
+    await new Promise(r=>setTimeout(r,300));
+  }
 });
 
 // ==================== RETRACT ====================
