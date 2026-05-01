@@ -882,7 +882,8 @@ ${sys2}
 }
 
 async function callAllJudges(buffer){
-  const [logic,evidence]=await callPairJudges('logic','evidence',LOGIC_SYSTEM,EVIDENCE_SYSTEM,buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
+  const logic=await callJudge(LOGIC_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
+  const evidence=await callJudge(EVIDENCE_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
   const [persuasion,rational]=await callPairJudges('persuasion','rational',PERSUASION_SYSTEM,RATIONAL_SYSTEM,buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
   return [logic,evidence,persuasion,rational];
 }
@@ -1061,17 +1062,11 @@ async function endDebate(reason,winner){
   S.ended=true;
   if(S.timerInterval) clearInterval(S.timerInterval);
 
-  // 接戦ボーナス
-  const ecoinDiff=Math.abs(S.ecoinA-S.ecoinB);
-  const closeBonus=calcWinBonus(ecoinDiff);
+  // 勝者決定（Eコインの大小で判定）
   let winnerSide=winner;
   if(!winner){
-    const totalA=S.logicA+S.evidenceA+S.persuasionA+S.rationalA;
-    const totalB=S.logicB+S.evidenceB+S.persuasionB+S.rationalB;
-    winnerSide=totalA>totalB?'a':totalA<totalB?'b':null;
+    winnerSide=S.ecoinA>S.ecoinB?'a':S.ecoinA<S.ecoinB?'b':null;
   }
-  if(winnerSide==='a'){S.ecoinA=Math.round(S.ecoinA+closeBonus);}
-  else if(winnerSide==='b'){S.ecoinB=Math.round(S.ecoinB+closeBonus);}
 
   $('s-debate').style.display='none';
   $('s-verdict').style.display='flex';
@@ -1115,7 +1110,7 @@ async function endDebate(reason,winner){
     S.log.push(`  証拠：${S.na} ${Math.round(S.evidenceA)} / ${S.nb} ${Math.round(S.evidenceB)}`);
     S.log.push(`  説得：${S.na} ${Math.round(S.persuasionA)} / ${S.nb} ${Math.round(S.persuasionB)}`);
     S.log.push(`  合理：${S.na} ${Math.round(S.rationalA)} / ${S.nb} ${Math.round(S.rationalB)}`);
-    S.log.push(`■ 接戦ボーナス：+${closeBonus}E`);
+  
     S.log.push(`■ 決着：${badgeText}　勝者：${wname}`);
     const logText=S.log.join('\n');
 
@@ -1126,11 +1121,11 @@ async function endDebate(reason,winner){
         <div class="vsub">テーマ：${S.topic}</div>
         <div class="vscores">
           <div class="vsbox a">
-            <div class="vsnum">${Math.round(S.ecoinA)}E</div>
+            <div class="vsnum">${Math.round(S.ecoinA)}</div>
             <div class="vslabel">${S.na}</div>
           </div>
           <div class="vsbox b">
-            <div class="vsnum">${Math.round(S.ecoinB)}E</div>
+            <div class="vsnum">${Math.round(S.ecoinB)}</div>
             <div class="vslabel">${S.nb}</div>
           </div>
         </div>
