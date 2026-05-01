@@ -355,7 +355,7 @@ const LOGIC_SYSTEM=`あなたは「論理審判」です。議論の論理構造
 【最重要】反則は「疑いの余地なく明確な場合のみ」認定。迷ったら認定しない。
 
 出力形式（JSONのみ、マークダウン不要）：
-{"scoreA":0〜150の整数,"scoreB":0〜150の整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"論理面の総評（2文）"}`;
+{"scoreA":青側(0〜150),"scoreB":赤側(0〜150),"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"論理面の総評（2文）"}`;
 
 const EVIDENCE_SYSTEM=`あなたは「証拠審判」です。発言における証拠・根拠の質のみを評価します。論理構造・感情・説得力は他の審判が担当するため無視してください。
 
@@ -380,7 +380,7 @@ const EVIDENCE_SYSTEM=`あなたは「証拠審判」です。発言における
 【最重要】反則は「疑いの余地なく明確な場合のみ」認定。迷ったら認定しない。
 
 出力形式（JSONのみ、マークダウン不要）：
-{"scoreA":0〜150の整数,"scoreB":0〜150の整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"証拠面の総評（2文）"}`;
+{"scoreA":青側(0〜150),"scoreB":赤側(0〜150),"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"証拠面の総評（2文）"}`;
 
 const PERSUASION_SYSTEM=`あなたは「説得審判」です。相手への誠実な応答と説得の質のみを評価します。論理構造・証拠・知性的深さは他の審判が担当するため無視してください。
 
@@ -404,7 +404,7 @@ const PERSUASION_SYSTEM=`あなたは「説得審判」です。相手への誠�
 【最重要】反則は「疑いの余地なく明確な場合のみ」認定。迷ったら認定しない。
 
 出力形式（JSONのみ、マークダウン不要）：
-{"scoreA":0〜150の整数,"scoreB":0〜150の整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"説得面の総評（2文）"}`;
+{"scoreA":青側(0〜150),"scoreB":赤側(0〜150),"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"説得面の総評（2文）"}`;
 
 const RATIONAL_SYSTEM=`あなたは「合理審判」です。互いの目的に対して誠実で議論を深める態度のみを評価します。
 
@@ -429,7 +429,7 @@ const RATIONAL_SYSTEM=`あなたは「合理審判」です。互いの目的に
 【最重要】反則は「疑いの余地なく明確な場合のみ」認定。合理的な加点は積極的に行う。
 
 出力形式（JSONのみ、マークダウン不要）：
-{"scoreA":0〜150の整数,"scoreB":0〜150の整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"合理面の総評（2文）"}`;
+{"scoreA":青側(0〜150),"scoreB":赤側(0〜150),"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"合理面の総評（2文）"}`;
 
 const OBJ_SYSTEM=`あなたはディベート上訴審判です。異議申し立てを審査しJSONのみで返答。マークダウン不要。
 【審査原則】
@@ -914,7 +914,7 @@ async function callJudge(system, buffer){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       system,
-      messages:[{role:'user',content:`テーマ：${S.topic}\n現在Eコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}\n\n【今回の6発言】\n${hist}`}]
+      messages:[{role:'user',content:`テーマ：${S.topic}\n※scoreA=${S.na}（青）、scoreB=${S.nb}（赤）\n現在Eコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}\n\n【今回の6発言】\n${hist}`}]
     })
   });
   const data=await res.json();
@@ -935,13 +935,13 @@ ${sys1}
 ${sys2}
 
 出力形式（JSONのみ、キーは必ず英字）：
-{"${key1}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},"${key2}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"}}`;
+{"${key1}":{"scoreA":青側の整数,"scoreB":赤側の整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},"${key2}":{"scoreA":青側の整数,"scoreB":赤側の整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"}}`;
   const res=await fetch('/api/judge',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       system,
-      messages:[{role:'user',content:`テーマ：${S.topic}\nEコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}\n\n【6発言】\n${hist}`}]
+      messages:[{role:'user',content:`テーマ：${S.topic}\n※scoreA=${S.na}（青）、scoreB=${S.nb}（赤）\nEコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}\n\n【6発言】\n${hist}`}]
     })
   });
   const data=await res.json();
