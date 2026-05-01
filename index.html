@@ -56,10 +56,15 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .ecoin-amount { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ecoin-amount.a { color: #5ba4f5; }
 .ecoin-amount.b { color: #f5845b; }
-.ecoin-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 0px; min-height: 20px; transition: all 0.6s ease; }
-.coin { height: 7px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.25); transition: all 0.4s ease; }
-.coin.a { background: linear-gradient(180deg, #7bc0ff, #2979d4); }
-.coin.b { background: linear-gradient(180deg, #ffb08a, #d44a1a); }
+.ecoin-piles { display: flex; align-items: flex-end; justify-content: center; gap: 3px; min-height: 80px; height: 80px; }
+.pile { display: flex; flex-direction: column-reverse; align-items: center; gap: 0px; }
+.coin { width: 24px; height: 6px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0; }
+.coin.a { background: linear-gradient(180deg, #7bc0ff 0%, #2979d4 50%, #1a5fa8 100%); }
+.coin.b { background: linear-gradient(180deg, #ffb08a 0%, #d44a1a 50%, #a83010 100%); }
+@keyframes coinPop { 0%{transform:scaleY(0) translateY(-4px);opacity:0} 60%{transform:scaleY(1.3) translateY(-2px);opacity:1} 100%{transform:scaleY(1) translateY(0);opacity:1} }
+.coin.new { animation: coinPop 0.3s ease forwards; }
+@keyframes countUp { from{opacity:0.3;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.ecoin-amount.updating { animation: countUp 0.4s ease; }
 .ecoin-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding-bottom: 4px; }
 .ecoin-vs { font-size: 14px; font-weight: 700; color: #555; }
 .ecoin-turn-count { font-size: 10px; color: #555; }
@@ -250,7 +255,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
       <div class="ecoin-title">E C O I N</div>
       <div class="ecoin-arena">
         <div class="ecoin-side">
-          <div class="ecoin-stack" id="stack-a"></div>
+          <div class="ecoin-piles" id="piles-a"></div>
           <div class="ecoin-amount a" id="ecoin-a">100</div>
           <div class="ecoin-name a" id="ename-a">選手A</div>
         </div>
@@ -260,7 +265,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
           <div class="judge-progress" id="judge-pips"></div>
         </div>
         <div class="ecoin-side">
-          <div class="ecoin-stack" id="stack-b"></div>
+          <div class="ecoin-piles" id="piles-b"></div>
           <div class="ecoin-amount b" id="ecoin-b">100</div>
           <div class="ecoin-name b" id="ename-b">選手B</div>
         </div>
@@ -524,30 +529,94 @@ function resetJudgePips(){
 }
 
 // ==================== ECOIN VISUAL ====================
-function updateEcoinVisual(animate=true){
-  $('ecoin-a').textContent=Math.round(S.ecoinA);
-  $('ecoin-b').textContent=Math.round(S.ecoinB);
-  $('turn-count').textContent=`${S.turnCount}/6`;
-  renderStack('stack-a', S.ecoinA, 'a', animate);
-  renderStack('stack-b', S.ecoinB, 'b', animate);
+function animateCount(el, from, to, duration=500){
+  const start=performance.now();
+  function step(now){
+    const p=Math.min((now-start)/duration,1);
+    const ease=p<0.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+    el.textContent=Math.round(from+(to-from)*ease);
+    if(p<1) requestAnimationFrame(step);
+    else el.textContent=Math.round(to);
+  }
+  requestAnimationFrame(step);
 }
 
-function renderStack(id, amount, side, animate){
-  const stack=$(id);
-  const coins=Math.max(0,Math.min(20, Math.round(amount/10)));
-  // 山形：下から上に向かって幅が狭くなる
-  const maxW=44, minW=18;
-  stack.innerHTML='';
-  for(let i=0;i<coins;i++){
-    const coin=document.createElement('div');
-    // i=0が一番下（最大幅）、i=coins-1が一番上（最小幅）
-    const ratio=coins>1?i/(coins-1):0;
-    const w=Math.round(maxW-(maxW-minW)*ratio);
-    coin.className=`coin ${side}`;
-    coin.style.width=w+'px';
-    if(animate){coin.style.opacity='0';setTimeout(()=>{coin.style.opacity='1';},i*30);}
-    stack.appendChild(coin);
+let prevEcoinA=100, prevEcoinB=100;
+
+function updateEcoinVisual(animate=true){
+  const newA=Math.round(S.ecoinA);
+  const newB=Math.round(S.ecoinB);
+  $('turn-count').textContent=`${S.turnCount}/6`;
+  if(animate&&newA!==prevEcoinA){
+    animateCount($('ecoin-a'), prevEcoinA, newA, 600);
+    $('ecoin-a').classList.add('updating');
+    setTimeout(()=>$('ecoin-a').classList.remove('updating'),600);
+  } else {
+    $('ecoin-a').textContent=newA;
   }
+  if(animate&&newB!==prevEcoinB){
+    animateCount($('ecoin-b'), prevEcoinB, newB, 600);
+    $('ecoin-b').classList.add('updating');
+    setTimeout(()=>$('ecoin-b').classList.remove('updating'),600);
+  } else {
+    $('ecoin-b').textContent=newB;
+  }
+  renderStack('stack-a', S.ecoinA, 'a', animate, prevEcoinA);
+  renderStack('stack-b', S.ecoinB, 'b', animate, prevEcoinB);
+  prevEcoinA=newA;
+  prevEcoinB=newB;
+}
+
+// 山積みコインのビジュアル
+// 5列の塔、中央が一番高くなる山型
+// totalCoins: 表示するコインの総数（最大50）
+const PILE_COUNT=7;
+const PILE_HEIGHTS=[0.4,0.65,0.85,1.0,0.85,0.65,0.4]; // 相対高さ（中央が最大）
+
+function renderPiles(id, amount, side, animate, prevAmount){
+  const container=$(id);
+  const totalCoins=Math.max(0,Math.min(50,Math.round(amount/2)));
+  const prevTotal=prevAmount!==undefined?Math.max(0,Math.min(50,Math.round(prevAmount/2))):totalCoins;
+  
+  // 各列のコイン数を山型に分配
+  function distribute(total){
+    const weights=PILE_HEIGHTS;
+    const wsum=weights.reduce((a,b)=>a+b,0);
+    let counts=weights.map(w=>Math.floor(total*w/wsum));
+    let rem=total-counts.reduce((a,b)=>a+b,0);
+    // 余りを中央から配分
+    const order=[3,2,4,1,5,0,6];
+    for(let i=0;i<rem;i++) counts[order[i%7]]++;
+    return counts;
+  }
+  
+  const newCounts=distribute(totalCoins);
+  const prevCounts=distribute(prevTotal);
+  
+  // 列を再描画
+  container.innerHTML='';
+  newCounts.forEach((count,pileIdx)=>{
+    const pile=document.createElement('div');
+    pile.className='pile';
+    const added=Math.max(0,count-prevCounts[pileIdx]);
+    for(let i=0;i<count;i++){
+      const coin=document.createElement('div');
+      coin.className=`coin ${side}`;
+      const isNew=animate&&i>=(count-added)&&added>0;
+      if(isNew){
+        coin.classList.add('new');
+        coin.style.animationDelay=(i*20)+'ms';
+      }
+      pile.appendChild(coin);
+    }
+    container.appendChild(pile);
+  });
+}
+
+function renderStack(id, amount, side, animate, prevAmount){
+  // idをpilesに変換
+  const pilesId=id.replace('stack-','piles-');
+  renderPiles(pilesId, amount, side, animate, prevAmount);
 }
 
 // ==================== TIMER ====================
@@ -625,16 +694,16 @@ function addJudgePanel(results){
     <div class="judge-closed">⚖ ラウンド判定（タップで表示）</div>
     <div class="judge-detail">
       <div class="judge-scores">
-        <div class="jscore"><div class="jscore-label">論理</div><div class="jscore-vals"><span class="jscore-val a">${logic.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${logic.scoreB}</span></div></div>
-        <div class="jscore"><div class="jscore-label">証拠</div><div class="jscore-vals"><span class="jscore-val a">${evidence.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${evidence.scoreB}</span></div></div>
-        <div class="jscore"><div class="jscore-label">説得</div><div class="jscore-vals"><span class="jscore-val a">${persuasion.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${persuasion.scoreB}</span></div></div>
-        <div class="jscore"><div class="jscore-label">合理</div><div class="jscore-vals"><span class="jscore-val a">${rational.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${rational.scoreB}</span></div></div>
+        <div class="jscore"><div class="jscore-label">LOGOS</div><div class="jscore-vals"><span class="jscore-val a">${logic.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${logic.scoreB}</span></div></div>
+        <div class="jscore"><div class="jscore-label">ETHOS</div><div class="jscore-vals"><span class="jscore-val a">${evidence.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${evidence.scoreB}</span></div></div>
+        <div class="jscore"><div class="jscore-label">PATHOS</div><div class="jscore-vals"><span class="jscore-val a">${persuasion.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${persuasion.scoreB}</span></div></div>
+        <div class="jscore"><div class="jscore-label">PHROM</div><div class="jscore-vals"><span class="jscore-val a">${rational.scoreA}</span><span style="color:#555">-</span><span class="jscore-val b">${rational.scoreB}</span></div></div>
       </div>
       <div class="judge-comment">
-        論理：${logic.comment||''}<br>
-        証拠：${evidence.comment||''}<br>
-        説得：${persuasion.comment||''}<br>
-        合理：${rational.comment||''}
+        LOGOS：${logic.comment||''}<br>
+        ETHOS：${evidence.comment||''}<br>
+        PATHOS：${persuasion.comment||''}<br>
+        PHROM：${rational.comment||''}
       </div>
     </div>
     <div class="judge-hint">タップで開閉</div>`;
@@ -924,10 +993,10 @@ function applyRoundResults(results){
 function logRoundResults(results){
   const [logic,evidence,persuasion,rational]=results;
   S.log.push(`\n【ラウンド${S.roundCount}判定】`);
-  S.log.push(`  論理：${S.na} ${logic.scoreA} / ${S.nb} ${logic.scoreB}　${logic.comment||''}`);
-  S.log.push(`  証拠：${S.na} ${evidence.scoreA} / ${S.nb} ${evidence.scoreB}　${evidence.comment||''}`);
-  S.log.push(`  説得：${S.na} ${persuasion.scoreA} / ${S.nb} ${persuasion.scoreB}　${persuasion.comment||''}`);
-  S.log.push(`  合理：${S.na} ${rational.scoreA} / ${S.nb} ${rational.scoreB}　${rational.comment||''}`);
+  S.log.push(`  LOGOS：${S.na} ${logic.scoreA} / ${S.nb} ${logic.scoreB}　${logic.comment||''}`);
+  S.log.push(`  ETHOS：${S.na} ${evidence.scoreA} / ${S.nb} ${evidence.scoreB}　${evidence.comment||''}`);
+  S.log.push(`  PATHOS：${S.na} ${persuasion.scoreA} / ${S.nb} ${persuasion.scoreB}　${persuasion.comment||''}`);
+  S.log.push(`  PHROM：${S.na} ${rational.scoreA} / ${S.nb} ${rational.scoreB}　${rational.comment||''}`);
   S.log.push(`  Eコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}`);
 }
 
@@ -1106,10 +1175,10 @@ async function endDebate(reason,winner){
     S.log.push(`\n${'─'.repeat(40)}`);
     S.log.push(`■ 最終Eコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}`);
     S.log.push(`■ 4軸スコア：`);
-    S.log.push(`  論理：${S.na} ${Math.round(S.logicA)} / ${S.nb} ${Math.round(S.logicB)}`);
-    S.log.push(`  証拠：${S.na} ${Math.round(S.evidenceA)} / ${S.nb} ${Math.round(S.evidenceB)}`);
-    S.log.push(`  説得：${S.na} ${Math.round(S.persuasionA)} / ${S.nb} ${Math.round(S.persuasionB)}`);
-    S.log.push(`  合理：${S.na} ${Math.round(S.rationalA)} / ${S.nb} ${Math.round(S.rationalB)}`);
+    S.log.push(`  LOGOS：${S.na} ${Math.round(S.logicA)} / ${S.nb} ${Math.round(S.logicB)}`);
+    S.log.push(`  ETHOS：${S.na} ${Math.round(S.evidenceA)} / ${S.nb} ${Math.round(S.evidenceB)}`);
+    S.log.push(`  PATHOS：${S.na} ${Math.round(S.persuasionA)} / ${S.nb} ${Math.round(S.persuasionB)}`);
+    S.log.push(`  PHROM：${S.na} ${Math.round(S.rationalA)} / ${S.nb} ${Math.round(S.rationalB)}`);
   
     S.log.push(`■ 決着：${badgeText}　勝者：${wname}`);
     const logText=S.log.join('\n');
@@ -1130,10 +1199,10 @@ async function endDebate(reason,winner){
           </div>
         </div>
         <div class="vaxis">
-          <div class="vaxis-box"><div class="vaxis-label">論理</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.logicA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.logicB)}</span></div></div>
-          <div class="vaxis-box"><div class="vaxis-label">証拠</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.evidenceA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.evidenceB)}</span></div></div>
-          <div class="vaxis-box"><div class="vaxis-label">説得</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.persuasionA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.persuasionB)}</span></div></div>
-          <div class="vaxis-box"><div class="vaxis-label">合理</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.rationalA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.rationalB)}</span></div></div>
+          <div class="vaxis-box"><div class="vaxis-label">LOGOS</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.logicA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.logicB)}</span></div></div>
+          <div class="vaxis-box"><div class="vaxis-label">ETHOS</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.evidenceA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.evidenceB)}</span></div></div>
+          <div class="vaxis-box"><div class="vaxis-label">PATHOS</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.persuasionA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.persuasionB)}</span></div></div>
+          <div class="vaxis-box"><div class="vaxis-label">PHROM</div><div class="vaxis-vals"><span style="color:#5ba4f5">${Math.round(S.rationalA)}</span><span style="color:#555">-</span><span style="color:#f5845b">${Math.round(S.rationalB)}</span></div></div>
         </div>
         <div class="vreason">${reasonText}</div>
       </div>
