@@ -895,11 +895,11 @@ function applyRoundResults(results){
   S.persuasionA+=persuasion.scoreA-100; S.persuasionB+=persuasion.scoreB-100;
   S.rationalA+=rational.scoreA-100; S.rationalB+=rational.scoreB-100;
 
-  // Eコインへの反映（4軸の差分を合算）
-  const diffA=(logic.scoreA+evidence.scoreA+persuasion.scoreA+rational.scoreA)-400;
-  const diffB=(logic.scoreB+evidence.scoreB+persuasion.scoreB+rational.scoreB)-400;
-  S.ecoinA=Math.max(0,Math.round(S.ecoinA+diffA*0.1));
-  S.ecoinB=Math.max(0,Math.round(S.ecoinB+diffB*0.1));
+  // Eコインへの反映：初期100 + (4軸合計 - 400) ÷ 2
+  const totalA=logic.scoreA+evidence.scoreA+persuasion.scoreA+rational.scoreA;
+  const totalB=logic.scoreB+evidence.scoreB+persuasion.scoreB+rational.scoreB;
+  S.ecoinA=Math.max(0,Math.round(S.ecoinA+(totalA-400)/2));
+  S.ecoinB=Math.max(0,Math.round(S.ecoinB+(totalB-400)/2));
 
   // 反則ペナルティをEコインに追加反映
   const penA=[...results[0].fallaciesA||[],...results[1].fallaciesA||[],...results[2].fallaciesA||[],...results[3].fallaciesA||[]].reduce((s,f)=>s+(f.penalty||0),0);
