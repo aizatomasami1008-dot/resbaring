@@ -928,6 +928,12 @@ async function callPairJudges(key1, key2, sys1, sys2, buffer){
   const hist=buffer.map(m=>`[${m.name}（${m.side==='a'?'青':'赤'}）]: ${m.text}`).join('\n');
   const system=`あなたは2役の審判AIです。JSONのみで返答。マークダウン不要。
 
+【絶対に守ること】
+- scoreAは必ず青側（${S.na}）のスコア
+- scoreBは必ず赤側（${S.nb}）のスコア
+- fallaciesAは青側の反則、fallaciesBは赤側の反則
+- 発言の名前で青側・赤側を判断すること
+
 === ${key1}審判の役割 ===
 ${sys1}
 
@@ -947,7 +953,6 @@ ${sys2}
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
   const parsed=safeParseJSON(raw);
-  console.log('PairJudge raw:', key1, key2, JSON.stringify(parsed).slice(0,200));
   return [parsed[key1]||{...DEFAULT_RESULT}, parsed[key2]||{...DEFAULT_RESULT}];
 }
 
@@ -969,11 +974,8 @@ function applyRoundResults(results){
   // Eコインへの反映：今ラウンドの4軸合計で差分を計算
   const roundTotalA=logic.scoreA+evidence.scoreA+persuasion.scoreA+rational.scoreA;
   const roundTotalB=logic.scoreB+evidence.scoreB+persuasion.scoreB+rational.scoreB;
-  console.log('SCORES A:', logic.scoreA, evidence.scoreA, persuasion.scoreA, rational.scoreA, '=', roundTotalA);
-  console.log('SCORES B:', logic.scoreB, evidence.scoreB, persuasion.scoreB, rational.scoreB, '=', roundTotalB);
   // 差分のみEコインに反映（勝った分だけ加点・負けた分だけ減点）
   const roundDiff=Math.round((roundTotalA-roundTotalB)/8);
-  console.log('roundDiff:', roundDiff, 'ecoinA before:', S.ecoinA, 'ecoinB before:', S.ecoinB);
   S.ecoinA=Math.max(0,Math.round(S.ecoinA+roundDiff));
   S.ecoinB=Math.max(0,Math.round(S.ecoinB-roundDiff));
 
