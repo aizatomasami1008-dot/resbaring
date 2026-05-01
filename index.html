@@ -962,7 +962,12 @@ async function callAllJudges(buffer){
 
   const system=`あなたは4人の審判AIです。以下の6発言を4つの視点でそれぞれ独立して評価し、JSONのみで返答してください。マークダウン不要。
 
-【重要】スコアのキーには必ず参加者の名前を使用してください。
+【絶対ルール】
+- scoreA = 必ず青側（${na}）のスコア
+- scoreB = 必ず赤側（${nb}）のスコア
+- fallaciesA = 青側（${na}）の反則のみ
+- fallaciesB = 赤側（${nb}）の反則のみ
+- 発言の「青」「赤」の表記で判断すること
 青側参加者名：${na}
 赤側参加者名：${nb}
 
@@ -978,12 +983,12 @@ ${PERSUASION_SYSTEM}
 === PHROM審判（議論を深める態度のみ評価）===
 ${RATIONAL_SYSTEM}
 
-出力形式（JSONのみ、名前キーを使用）：
+出力形式（JSONのみ）：
 {
-  "logos":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
-  "ethos":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
-  "pathos":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
-  "phrom":{"${na}":0〜150の整数,"${nb}":0〜150の整数,"fallacies_${na}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallacies_${nb}":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"}
+  "logos":{"scoreA":青側0〜150,"scoreB":赤側0〜150,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
+  "ethos":{"scoreA":青側0〜150,"scoreB":赤側0〜150,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
+  "pathos":{"scoreA":青側0〜150,"scoreB":赤側0〜150,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"},
+  "phrom":{"scoreA":青側0〜150,"scoreB":赤側0〜150,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"文言"}],"comment":"2文"}
 }`;
 
   const res=await fetch('/api/judge',{
@@ -1001,12 +1006,13 @@ ${RATIONAL_SYSTEM}
   // 名前キーからscoreA/scoreB形式に変換
   function toResult(obj, key){
     if(!obj||!obj[key]) return {...DEFAULT_RESULT};
+    const r=obj[key];
     return {
-      scoreA: obj[key][na]||100,
-      scoreB: obj[key][nb]||100,
-      fallaciesA: obj[key][`fallacies_${na}`]||[],
-      fallaciesB: obj[key][`fallacies_${nb}`]||[],
-      comment: obj[key].comment||''
+      scoreA: r.scoreA||100,
+      scoreB: r.scoreB||100,
+      fallaciesA: r.fallaciesA||[],
+      fallaciesB: r.fallaciesB||[],
+      comment: r.comment||''
     };
   }
 
