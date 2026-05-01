@@ -54,8 +54,8 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .ecoin-amount { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ecoin-amount.a { color: #5ba4f5; }
 .ecoin-amount.b { color: #f5845b; }
-.ecoin-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 1px; min-height: 20px; transition: all 0.6s ease; }
-.coin { width: 28px; height: 8px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); transition: all 0.4s ease; }
+.ecoin-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 0px; min-height: 20px; transition: all 0.6s ease; }
+.coin { height: 7px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.25); transition: all 0.4s ease; }
 .coin.a { background: linear-gradient(180deg, #7bc0ff, #2979d4); }
 .coin.b { background: linear-gradient(180deg, #ffb08a, #d44a1a); }
 .ecoin-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding-bottom: 4px; }
@@ -132,6 +132,12 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .concede-btn { padding: 8px; font-size: 12px; background: white; border: 1px solid #d4c8f5; border-radius: 8px; color: #5b4d8a; cursor: pointer; }
 .concede-btn:hover { background: #f3f0ff; }
 .concede-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.retract-btn { width:100%; padding: 8px; font-size: 12px; background: white; border: 1px solid #ddd; border-radius: 8px; color: #888; cursor: pointer; }
+.retract-btn:hover { background: #f5f5f0; }
+.retract-approve-btn { padding: 8px; font-size: 12px; background: white; border: 1px solid #c8e6c9; border-radius: 8px; color: #2e7d32; cursor: pointer; }
+.retract-approve-btn:hover { background: #e8f5e9; }
+.retract-deny-btn { padding: 8px; font-size: 12px; background: white; border: 1px solid #ffd0d0; border-radius: 8px; color: #c00; cursor: pointer; }
+.retract-deny-btn:hover { background: #fff0f0; }
 
 /* FINAL OBJ */
 .final-obj-area { border-top: 2px solid #ffe082; padding: 1rem 1.5rem; background: #fffde7; }
@@ -288,6 +294,16 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
       <div class="action-row">
         <button class="obj-btn" id="obj-btn" disabled>⚖ 判定に異議（残3回）</button>
         <button class="concede-btn" id="concede-btn" disabled>🤝 相手の主張を認める</button>
+      </div>
+      <div id="retract-area" style="display:none;margin-top:8px;">
+        <button class="retract-btn" id="retract-req-btn">↩ 直前の発言を取り消し申請</button>
+      </div>
+      <div id="retract-confirm-area" style="display:none;margin-top:8px;">
+        <div style="font-size:12px;color:#7d6608;text-align:center;margin-bottom:6px;">相手が取り消しを申請しています</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="retract-approve-btn" id="retract-approve-btn">✓ 承認する</button>
+          <button class="retract-deny-btn" id="retract-deny-btn">✗ 拒否する</button>
+        </div>
       </div>
     </div>
     <div id="final-obj-area" class="final-obj-area" style="display:none">
@@ -516,23 +532,18 @@ function updateEcoinVisual(animate=true){
 function renderStack(id, amount, side, animate){
   const stack=$(id);
   const coins=Math.max(0,Math.min(20, Math.round(amount/10)));
-  const current=stack.children.length;
-  if(coins>current){
-    for(let i=current;i<coins;i++){
-      const coin=document.createElement('div');
-      coin.className=`coin ${side}`;
-      if(animate){coin.style.opacity='0';setTimeout(()=>{coin.style.opacity='1';},i*50);}
-      stack.appendChild(coin);
-    }
-  } else if(coins<current){
-    const toRemove=current-coins;
-    for(let i=0;i<toRemove;i++){
-      const last=stack.lastChild;
-      if(last){
-        if(animate){last.style.opacity='0';setTimeout(()=>{if(last.parentNode)last.parentNode.removeChild(last);},300);}
-        else stack.removeChild(last);
-      }
-    }
+  // 山形：下から上に向かって幅が狭くなる
+  const maxW=44, minW=18;
+  stack.innerHTML='';
+  for(let i=0;i<coins;i++){
+    const coin=document.createElement('div');
+    // i=0が一番下（最大幅）、i=coins-1が一番上（最小幅）
+    const ratio=coins>1?(coins-1-i)/(coins-1):0;
+    const w=Math.round(minW+(maxW-minW)*(1-ratio));
+    coin.className=`coin ${side}`;
+    coin.style.width=w+'px';
+    if(animate){coin.style.opacity='0';setTimeout(()=>{coin.style.opacity='1';},i*30);}
+    stack.appendChild(coin);
   }
 }
 
@@ -637,6 +648,88 @@ $('arginput').addEventListener('input',()=>{
   $('climit').textContent=$('arginput').value.length+' / 500字';
 });
 
+// ==================== RETRACT ====================
+let retractPending=false;
+let retractRequestSide=null;
+
+function updateRetractUI(){
+  const retractArea=$('retract-area');
+  const confirmArea=$('retract-confirm-area');
+  if(!retractArea||!confirmArea) return;
+  if(retractPending){
+    // 申請した側とは反対のターン（承認待ち）
+    retractArea.style.display='none';
+    if(S.turn!==retractRequestSide){
+      confirmArea.style.display='block';
+    } else {
+      confirmArea.style.display='none';
+    }
+  } else {
+    confirmArea.style.display='none';
+    // 直前の発言が自分のターン（相手が今発言した直後）なら取り消し申請可能
+    if(S.msgs.length>0&&!S.busy&&!S.ended){
+      retractArea.style.display='block';
+    } else {
+      retractArea.style.display='none';
+    }
+  }
+}
+
+document.addEventListener('click',e=>{
+  if(e.target.id==='retract-req-btn'){
+    if(S.busy||S.ended||retractPending) return;
+    const lastMsg=S.msgs[S.msgs.length-1];
+    if(!lastMsg) return;
+    retractPending=true;
+    retractRequestSide=lastMsg.side;
+    addMsg('system',null,`${lastMsg.side==='a'?S.na:S.nb}が直前の発言の取り消しを申請しました。相手の承認を待っています。`);
+    updateRetractUI();
+  }
+  if(e.target.id==='retract-approve-btn'){
+    if(!retractPending) return;
+    const lastMsg=S.msgs[S.msgs.length-1];
+    const lastBuf=S.buffer[S.buffer.length-1];
+    S.msgs.pop();
+    if(lastBuf) S.buffer.pop();
+    if(S.turnCount>0) S.turnCount--;
+    // メッセージ欄の最後のmsgを削除
+    const area=$('msgs');
+    const children=[...area.children];
+    // system msgを削除してから最後の発言msgを削除
+    for(let i=children.length-1;i>=0;i--){
+      if(children[i].classList.contains('system')){children[i].remove();break;}
+    }
+    // 最後の発言msg（a or b）を削除
+    const allMsgs=[...area.children];
+    for(let i=allMsgs.length-1;i>=0;i--){
+      if(allMsgs[i].classList.contains('a')||allMsgs[i].classList.contains('b')){
+        allMsgs[i].remove();break;
+      }
+    }
+    S.turn=lastMsg.side;
+    retractPending=false;retractRequestSide=null;
+    addMsg('bonus',null,'取り消しが承認されました。発言を取り消しました。');
+    updateJudgePip(S.turnCount);
+    // pip戻し
+    const pip=$(`pip-${S.turnCount}`);
+    if(pip) pip.classList.remove('done');
+    updateRoundIndicator();
+    updateTurn();updateTimerDisplay();updateRetractUI();
+  }
+  if(e.target.id==='retract-deny-btn'){
+    if(!retractPending) return;
+    retractPending=false;retractRequestSide=null;
+    // system msgを削除
+    const area=$('msgs');
+    const children=[...area.children];
+    for(let i=children.length-1;i>=0;i--){
+      if(children[i].classList.contains('system')){children[i].remove();break;}
+    }
+    addMsg('penalty',null,'取り消し申請が拒否されました。');
+    updateRetractUI();
+  }
+});
+
 // ==================== SEND ====================
 $('sendbtn').addEventListener('click',async()=>{
   if(S.busy||S.ended||S.finalObjPhase) return;
@@ -690,6 +783,7 @@ $('sendbtn').addEventListener('click',async()=>{
   S.turn=side==='a'?'b':'a';
   updateRoundIndicator();
   updateTurn();updateTimerDisplay();
+  updateRetractUI();
 });
 
 // ==================== JUDGE CALLS ====================
@@ -720,11 +814,35 @@ async function callJudge(system, buffer){
 
 const DEFAULT_RESULT={scoreA:100,scoreB:100,fallaciesA:[],fallaciesB:[],comment:'採点不可'};
 
+async function callPairJudges(system1, system2, label1, label2, buffer){
+  const hist=buffer.map(m=>`[${m.name}（${m.side==='a'?'青':'赤'}）]: ${m.text}`).join('\n');
+  const system=`あなたは2人の審判です。以下の2つの役割でそれぞれ独立して採点し、JSONのみで返答してください。マークダウン不要。
+
+【${label1}審判】
+${system1}
+
+【${label2}審判】
+${system2}
+
+出力形式（JSONのみ）：
+{"${label1}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"総評2文"},"${label2}":{"scoreA":整数,"scoreB":整数,"fallaciesA":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"fallaciesB":[{"name":"反則名","penalty":数値,"evidence":"該当文言"}],"comment":"総評2文"}}`;
+  const res=await fetch('/api/judge',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      system,
+      messages:[{role:'user',content:`テーマ：${S.topic}\n現在Eコイン：${S.na} ${Math.round(S.ecoinA)} / ${S.nb} ${Math.round(S.ecoinB)}\n\n【今回の6発言】\n${hist}`}]
+    })
+  });
+  const data=await res.json();
+  const raw=data.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim();
+  const parsed=safeParseJSON(raw);
+  return [parsed[label1]||{...DEFAULT_RESULT},parsed[label2]||{...DEFAULT_RESULT}];
+}
+
 async function callAllJudges(buffer){
-  const logic=await callJudge(LOGIC_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
-  const evidence=await callJudge(EVIDENCE_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
-  const persuasion=await callJudge(PERSUASION_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
-  const rational=await callJudge(RATIONAL_SYSTEM,buffer).catch(()=>({...DEFAULT_RESULT}));
+  const [logic,evidence]=await callPairJudges(LOGIC_SYSTEM,EVIDENCE_SYSTEM,'論理','証拠',buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
+  const [persuasion,rational]=await callPairJudges(PERSUASION_SYSTEM,RATIONAL_SYSTEM,'説得','合理',buffer).catch(()=>[{...DEFAULT_RESULT},{...DEFAULT_RESULT}]);
   return [logic,evidence,persuasion,rational];
 }
 
@@ -831,20 +949,16 @@ async function callObjReview(lastMsg,lastResult,objName){
 $('concede-btn').addEventListener('click',()=>{
   if(S.busy||S.ended||S.finalObjPhase) return;
   const side=S.turn,name=side==='a'?S.na:S.nb;
-  // 勝敗に影響しないが合理+20、論理+10ボーナス
-  if(side==='a'){
-    S.rationalA+=20;S.logicA+=10;
-    S.ecoinA=Math.min(S.ecoinA+8,300);
-  } else {
-    S.rationalB+=20;S.logicB+=10;
-    S.ecoinB=Math.min(S.ecoinB+8,300);
-  }
-  // 認められた側にも合理+5
+  const winner=side==='a'?'b':'a';
+  // 合理+20、論理+10ボーナスを付与してから終了
+  if(side==='a'){S.rationalA+=20;S.logicA+=10;S.ecoinA=Math.min(S.ecoinA+8,300);}
+  else{S.rationalB+=20;S.logicB+=10;S.ecoinB=Math.min(S.ecoinB+8,300);}
   if(side==='a'){S.rationalB+=5;S.ecoinB=Math.min(S.ecoinB+2,300);}
   else{S.rationalA+=5;S.ecoinA=Math.min(S.ecoinA+2,300);}
   updateEcoinVisual(true);
   addMsg('concede',null,`${name}が相手の主張を認めました（合理+20、論理+10ボーナス）`);
   S.log.push(`\n■ ${name}が主張を認め、合理・論理ボーナス加算`);
+  setTimeout(()=>endDebate('concede',winner),800);
 });
 
 // ==================== FINAL OBJ PHASE ====================
