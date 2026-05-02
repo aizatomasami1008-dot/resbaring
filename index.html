@@ -106,6 +106,16 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f0; min-height: 
 .msg.bonus { align-self: center; max-width: 92%; background: #e8f5e9; border: 1px solid #c8e6c9; color: #2e7d32; font-size: 12px; text-align: center; }
 .msg.concede { align-self: center; max-width: 92%; background: #f3f0ff; border: 1px solid #d4c8f5; color: #5b4d8a; font-size: 12px; text-align: center; }
 .msg.system { align-self: center; max-width: 92%; background: #fff8e1; border: 1px solid #ffe082; color: #7d6608; font-size: 12px; text-align: center; font-weight: 600; }
+.msg-wrapper { position: relative; display: flex; flex-direction: column; }
+.msg-wrapper.a { align-items: flex-start; }
+.msg-wrapper.b { align-items: flex-end; }
+.stamp { position: absolute; top: -8px; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; opacity: 0; transform: scale(0.5) rotate(-8deg); transition: opacity 0.3s, transform 0.3s; z-index: 10; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.stamp.a { right: -8px; }
+.stamp.b { left: -8px; }
+.stamp.positive { background: #2ecc71; color: white; }
+.stamp.negative { background: #e74c3c; color: white; }
+.stamp.neutral { background: #95a5a6; color: white; }
+.stamp.show { opacity: 1; transform: scale(1) rotate(-4deg); }
 .mmeta { font-size: 11px; margin-bottom: 4px; font-weight: 600; opacity: 0.6; }
 
 /* JUDGE PANEL */
@@ -676,13 +686,26 @@ function updateTurn(judging=false,objTurn=false){
   $('concede-btn').disabled=false;
 }
 
-function addMsg(side,name,text){
+function addMsg(side,name,text,msgId){
   const area=$('msgs');
-  const d=document.createElement('div');
-  d.className='msg '+side;
-  if(name){const m=document.createElement('div');m.className='mmeta';m.textContent=name;d.appendChild(m);}
-  const c=document.createElement('div');c.textContent=text;d.appendChild(c);
-  area.appendChild(d);area.scrollTop=area.scrollHeight;
+  if(side==='a'||side==='b'){
+    const wrapper=document.createElement('div');
+    wrapper.className='msg-wrapper '+side;
+    if(msgId) wrapper.id='wrapper-'+msgId;
+    const d=document.createElement('div');
+    d.className='msg '+side;
+    if(name){const m=document.createElement('div');m.className='mmeta';m.textContent=name;d.appendChild(m);}
+    const c=document.createElement('div');c.textContent=text;d.appendChild(c);
+    wrapper.appendChild(d);
+    area.appendChild(wrapper);
+  } else {
+    const d=document.createElement('div');
+    d.className='msg '+side;
+    if(name){const m=document.createElement('div');m.className='mmeta';m.textContent=name;d.appendChild(m);}
+    const c=document.createElement('div');c.textContent=text;d.appendChild(c);
+    area.appendChild(d);
+  }
+  area.scrollTop=area.scrollHeight;
 }
 
 function addJudgePanel(results){
@@ -846,9 +869,10 @@ $('sendbtn').addEventListener('click',async()=>{
   const text=$('arginput').value.trim();
   if(!text||text.length>500) return;
   const side=S.turn,name=side==='a'?S.na:S.nb;
-  addMsg(side,name,text);
+  const msgId=`msg-${S.msgs.length}`;
+  addMsg(side,name,text,msgId);
   $('arginput').value='';$('climit').textContent='0 / 500字';
-  S.msgs.push({side,name,text});
+  S.msgs.push({side,name,text,msgId});
   S.buffer.push({side,name,text});
   S.turnCount++;
   S.canObject=false;
@@ -867,14 +891,14 @@ $('sendbtn').addEventListener('click',async()=>{
     try{
       const results=await callAllJudges(S.buffer);
       S.lastJudgeResult=results;
-      applyRoundResults(results);
+      // スタンプアニメーション付きでスコアを反映
+      await animateStampsAndCoins(S.buffer, results);
       addJudgePanel(results);
       S.canObject=true;
       S.buffer=[];
       S.turnCount=0;
       S.roundCount++;
       resetJudgePips();
-      updateEcoinVisual(true);
       logRoundResults(results);
 
       if(S.wcScore&&(S.ecoinA<=0||S.ecoinB<=0)){
@@ -1024,39 +1048,104 @@ ${RATIONAL_SYSTEM}
   return [logic,evidence,persuasion,rational];
 }
 
-function applyRoundResults(results){
+// 各発言のスコア寄与を計算
+function calcMsgScores(buffer, results){
   const [logic,evidence,persuasion,rational]=results;
-  // 4軸スコアを更新
+  // 各発言に対して審判スコアをどう配分するか
+  // 簡易的に：同じsideの発言に均等配分
+  const aCount=buffer.filter(m=>m.side==='a').length;
+  const bCount=buffer.filter(m=>m.side==='b').length;
+  const totalA=logic.scoreA+evidence.scoreA+persuasion.scoreA+rational.scoreA;
+  const totalB=logic.scoreB+evidence.scoreB+persuasion.scoreB+rational.scoreB;
+  const baseA=aCount>0?(totalA-400)/aCount:0;
+  const baseB=bCount>0?(totalB-400)/bCount:0;
+  // 反則は最後の発言に集中させる
+  const allFallaciesA=[...results[0].fallaciesA||[],...results[1].fallaciesA||[],...results[2].fallaciesA||[],...results[3].fallaciesA||[]];
+  const allFallaciesB=[...results[0].fallaciesB||[],...results[1].fallaciesB||[],...results[2].fallaciesB||[],...results[3].fallaciesB||[]];
+  const penA=Math.min(allFallaciesA.reduce((s,f)=>s+Math.abs(f.penalty||0),0),20);
+  const penB=Math.min(allFallaciesB.reduce((s,f)=>s+Math.abs(f.penalty||0),0),20);
+  const fallacyNamesA=allFallaciesA.map(f=>f.name);
+  const fallacyNamesB=allFallaciesB.map(f=>f.name);
+
+  return buffer.map((msg,i)=>{
+    const isLast=i===buffer.length-1;
+    const isLastA=isLast&&msg.side==='a'||(!buffer.slice(i+1).some(m=>m.side==='a')&&msg.side==='a'&&i===buffer.map((m,j)=>m.side==='a'?j:-1).filter(j=>j>=0).slice(-1)[0]);
+    const isLastB=!buffer.slice(i+1).some(m=>m.side==='b')&&msg.side==='b';
+    const base=msg.side==='a'?baseA:baseB;
+    let pen=0;
+    let fallacyNames=[];
+    if(msg.side==='a'&&isLastA){pen=penA;fallacyNames=fallacyNamesA;}
+    if(msg.side==='b'&&isLastB){pen=penB;fallacyNames=fallacyNamesB;}
+    return {msgId:msg.msgId,side:msg.side,base:Math.round(base/3),pen,fallacyNames};
+  });
+}
+
+async function animateStampsAndCoins(buffer, results){
+  const scores=calcMsgScores(buffer,results);
+  // まずEコインの初期状態を設定（スタンプ前）
+  // 4軸累積スコアだけ更新（Eコインは後でアニメーション）
+  const [logic,evidence,persuasion,rational]=results;
   S.logicA+=logic.scoreA-100; S.logicB+=logic.scoreB-100;
   S.evidenceA+=evidence.scoreA-100; S.evidenceB+=evidence.scoreB-100;
   S.persuasionA+=persuasion.scoreA-100; S.persuasionB+=persuasion.scoreB-100;
   S.rationalA+=rational.scoreA-100; S.rationalB+=rational.scoreB-100;
 
-  // Eコインへの反映：今ラウンドの4軸合計で差分を計算
+  // 各発言に順番にスタンプを押しながらコインを動かす
+  for(const sc of scores){
+    await new Promise(r=>setTimeout(r,300));
+    const wrapper=document.getElementById('wrapper-'+sc.msgId);
+    if(!wrapper) continue;
+    const netChange=sc.side==='a'?(sc.base-sc.pen):-(sc.base-sc.pen);
+    // コイン変動
+    S.ecoinA=Math.max(0,Math.round(sc.side==='a'?S.ecoinA+sc.base:S.ecoinA));
+    S.ecoinB=Math.max(0,Math.round(sc.side==='b'?S.ecoinB+sc.base:S.ecoinB));
+    if(sc.pen>0){
+      if(sc.side==='a') S.ecoinA=Math.max(0,S.ecoinA-sc.pen);
+      else S.ecoinB=Math.max(0,S.ecoinB-sc.pen);
+    }
+    // 相手のコインも少し下げる（差分反映）
+    if(sc.side==='a') S.ecoinB=Math.max(0,Math.round(S.ecoinB-sc.base*0.3));
+    else S.ecoinA=Math.max(0,Math.round(S.ecoinA-sc.base*0.3));
+    updateEcoinVisual(true);
+
+    // スタンプ作成
+    const stamp=document.createElement('div');
+    stamp.className='stamp '+sc.side;
+    let label='';
+    let stampType='neutral';
+    if(sc.base>0&&sc.pen===0){
+      label=`+${sc.base}`;
+      stampType='positive';
+    } else if(sc.pen>0&&sc.base<=0){
+      label=`-${sc.pen} ${sc.fallacyNames[0]||''}`;
+      stampType='negative';
+    } else if(sc.base>0&&sc.pen>0){
+      const net=sc.base-sc.pen;
+      label=net>=0?`+${net}（反則）`:`${net}（反則）`;
+      stampType=net>=0?'positive':'negative';
+    } else {
+      label='±0';
+      stampType='neutral';
+    }
+    stamp.className=`stamp ${sc.side} ${stampType}`;
+    stamp.textContent=label;
+    wrapper.style.position='relative';
+    wrapper.appendChild(stamp);
+    await new Promise(r=>setTimeout(r,50));
+    stamp.classList.add('show');
+    await new Promise(r=>setTimeout(r,400));
+  }
+  await new Promise(r=>setTimeout(r,300));
+}
+
+function applyRoundResults(results){
+  // 4軸スコア累積はanimateStampsAndCoinsで実施済み
+  // ここではEコインの最終整合のみ行う
+  const [logic,evidence,persuasion,rational]=results;
   const roundTotalA=logic.scoreA+evidence.scoreA+persuasion.scoreA+rational.scoreA;
   const roundTotalB=logic.scoreB+evidence.scoreB+persuasion.scoreB+rational.scoreB;
-  // 差分のみEコインに反映（勝った分だけ加点・負けた分だけ減点）
-  const roundDiff=Math.round((roundTotalA-roundTotalB)/3);
-  S.ecoinA=Math.max(0,Math.round(S.ecoinA+roundDiff));
-  S.ecoinB=Math.max(0,Math.round(S.ecoinB-roundDiff));
-
-  // 反則ペナルティをEコインに追加反映
-  const allFallaciesA=[...results[0].fallaciesA||[],...results[1].fallaciesA||[],...results[2].fallaciesA||[],...results[3].fallaciesA||[]];
-  const allFallaciesB=[...results[0].fallaciesB||[],...results[1].fallaciesB||[],...results[2].fallaciesB||[],...results[3].fallaciesB||[]];
-  const penA=allFallaciesA.reduce((s,f)=>s+Math.abs(f.penalty||0),0);
-  const penB=allFallaciesB.reduce((s,f)=>s+Math.abs(f.penalty||0),0);
-  S.ecoinA=Math.max(0,S.ecoinA-Math.min(penA,20));
-  S.ecoinB=Math.max(0,S.ecoinB-Math.min(penB,20));
-
-  // 反則メッセージ
-  if(penA>0){
-    const names=[...results[0].fallaciesA||[],...results[1].fallaciesA||[],...results[2].fallaciesA||[],...results[3].fallaciesA||[]].map(f=>f.name).join('、');
-    addMsg('penalty',null,`⚠ ${S.na} 反則：${names}（-${Math.min(penA,20)}E）`);
-  }
-  if(penB>0){
-    const names=[...results[0].fallaciesB||[],...results[1].fallaciesB||[],...results[2].fallaciesB||[],...results[3].fallaciesB||[]].map(f=>f.name).join('、');
-    addMsg('penalty',null,`⚠ ${S.nb} 反則：${names}（-${Math.min(penB,20)}E）`);
-  }
+  // animateStamps後のEコインをそのまま使う（既に反映済み）
+  // 反則メッセージはスタンプ内で表示されるのでここでは不要
 }
 
 function logRoundResults(results){
