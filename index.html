@@ -873,7 +873,7 @@ $('sendbtn').addEventListener('click',async()=>{
   addMsg(side,name,text,msgId);
   $('arginput').value='';$('climit').textContent='0 / 500字';
   S.msgs.push({side,name,text,msgId});
-  S.buffer.push({side,name,text});
+  S.buffer.push({side,name,text,msgId});
   S.turnCount++;
   S.canObject=false;
 
